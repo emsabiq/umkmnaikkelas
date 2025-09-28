@@ -220,6 +220,21 @@
       try{
         // Buka tab kosong dulu agar tidak diblokir popup blocker
         opened = window.open('about:blank', '_blank');
+
+        // PRELOADER ringan agar tab baru langsung "hidup"
+        if (opened && opened.document){
+          try{
+            opened.document.write(
+              '<!doctype html><title>Membuka Pembayaran…</title>' +
+              '<style>html,body{height:100%;margin:0}body{display:flex;align-items:center;justify-content:center;font:14px system-ui;background:#fff;color:#0b3e3a}' +
+              '.sp{width:14px;height:14px;border:3px solid #e5e7eb;border-top-color:#0ea5a7;border-radius:50%;animation:spin 1s linear infinite}' +
+              '@keyframes spin{to{transform:rotate(360deg)}} .row{display:flex;align-items:center;gap:.6rem}</style>' +
+              '<div class="row"><div class="sp"></div><div>Membuka Midtrans…</div></div>'
+            );
+            opened.document.close();
+          }catch(_){}
+        }
+
         const o = await createOrder(name, contact);
 
         currentOrderId = o.order_id;
@@ -242,7 +257,7 @@
       }
     });
 
-    // ================== Redirect dari Snap ==================
+    // ================== Redirect dari Snap (via finish.html) ==================
     (async ()=>{
       const qOrder = qs.get('order_id');
       if (qOrder){

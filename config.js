@@ -24,10 +24,10 @@
     // ====== (Opsional) URL finish Snap (dipakai di backend/GAS) ======
     // Jika dihosting di domain publik, ubah jadi origin kamu:
     // FINISH_URL: "https://domainkamu.com/pay.html"
-    FINISH_URL:
-      (location.origin && location.origin !== "null")
-        ? (location.origin + "/pay.html")
-        : "./pay.html"
+FINISH_URL:
+  (location.origin && location.origin !== "null")
+    ? (location.origin + "/finish.html")
+    : "./finish.html"
   };
 
   // Merge agar bisa dioverride bila perlu
@@ -45,3 +45,4 @@
     document.head && document.head.appendChild(link);
   } catch (_) {}
 })();
+

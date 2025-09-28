@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>umkmall — Pembayaran</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body{ background:#f6f7fb; }
+    .card{ border-radius:14px; }
+    .muted{ color:#6c757d; }
+    .cred-box .label{ width:110px; display:inline-block; }
+  </style>
+
+  <!-- Config (ambil WORKER_URL) -->
+  <script src="./config.js"></script>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h3 class="fw-bold mb-3">umkmall — Bayar</h3>
+
+            <form id="form" class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nama</label>
+                <input id="name" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Kontak (Email/WA)</label>
+                <input id="contact" class="form-control" required>
+              </div>
+              <div class="col-12 d-flex gap-2">
+                <button id="btnPay" class="btn btn-primary" type="submit">
+                  <span class="pay-text"><i class="bi bi-credit-card"></i> Bayar Sekarang</span>
+                  <span class="pay-spin d-none"><span class="spinner-border spinner-border-sm me-1"></span>Membuat order…</span>
+                </button>
+                <button id="btnStatus" class="btn btn-outline-secondary" type="button" disabled>Cek Status</button>
+              </div>
+              <div class="form-text">Tombol akan membuka tab Midtrans (Snap). Biarkan halaman ini terbuka.</div>
+            </form>
+
+            <hr class="my-4">
+
+            <div id="orderBox" class="d-none">
+              <div class="mb-1 small text-secondary">Order ID:</div>
+              <div class="fs-6 fw-semibold" id="orderId">-</div>
+              <div class="mt-2">Status: <span id="status" class="badge text-bg-secondary">menunggu…</span></div>
+            </div>
+
+            <div id="credBox" class="d-none mt-4">
+              <div class="alert alert-warning d-flex align-items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                <div>
+                  <strong>Simpan kredensial Anda.</strong><br>
+                  Salin atau unduh sebelum login. Setelah halaman ditutup, password tidak ditampilkan lagi di sini.
+                </div>
+              </div>
+
+              <h6>Credensial:</h6>
+              <div class="border rounded p-3 cred-box">
+                <div class="mb-1"><span class="label muted">Username</span>: <span id="uOut" class="fw-semibold"></span></div>
+                <div><span class="label muted">Password</span>: <span id="pOut" class="fw-semibold"></span></div>
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                  <button id="btnCopy" class="btn btn-sm btn-outline-primary" type="button"><i class="bi bi-clipboard"></i> Salin</button>
+                  <button id="btnSaveTxt" class="btn btn-sm btn-outline-secondary" type="button"><i class="bi bi-download"></i> Unduh TXT</button>
+                  <button id="btnLoginNow" class="btn btn-sm btn-success ms-auto" type="button" disabled><i class="bi bi-box-arrow-in-right"></i> Login Sekarang</button>
+                </div>
+              </div>
+              <div class="small text-secondary mt-2">
+                Atau login manual: <a href="./login.html" class="link-secondary">buka halaman Login</a>.
+              </div>
+            </div>
+
+            <div id="alert" class="alert d-none mt-4" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="text-center mt-3">
+          <a href="./index.html" class="small">Sudah punya akun? Masuk di sini</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ================== Konfigurasi ==================
+    const WORKER_URL =
+      (window.UMKM_CONFIG && window.UMKM_CONFIG.WORKER_URL) ||
+      "https://umkm.msabiq-stan.workers.dev";
+
+    // ================== Helper UI ==================
+    const $ = (id)=>document.getElementById(id);
+    const qs = new URLSearchParams(location.search);
+
+    function setStatus(text, cls){
+      const el = $('status');
+      el.textContent = text;
+      el.className = 'badge ' + (cls || 'text-bg-secondary');
+    }
+    function showAlert(type, msg){
+      const a = $('alert');
+      a.className = 'alert alert-' + type;
+      a.textContent = msg;
+      a.classList.remove('d-none');
+    }
+    function hideAlert(){ $('alert').classList.add('d-none'); }
+
+    function togglePayLoading(loading){
+      $('btnPay').disabled = loading;
+      $('btnStatus').disabled = loading || !currentOrderId;
+      document.querySelector('.pay-text').classList.toggle('d-none', loading);
+      document.querySelector('.pay-spin').classList.toggle('d-none', !loading);
+    }
+
+    function savePrefill(name, contact){
+      try { localStorage.setItem('umkm_prefill', JSON.stringify({ name, contact })); } catch(_) {}
+    }
+
+    // ================== API ==================
+    async function createOrder(name, contact){
+      const r = await fetch(WORKER_URL + '/create-order', {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({ service_id:'umkm_basic', customer:{ name, contact } })
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'create-order failed');
+      return j; // {ok, order_id, redirect_url, ...}
+    }
+    async function checkStatus(order_id){
+      const r = await fetch(WORKER_URL + '/status-check', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ order_id })
+      });
+      return await r.json();
+    }
+    async function orderClaim(order_id, contact){
+      const r = await fetch(WORKER_URL + '/?route=order-claim', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ order_id, contact })
+      });
+      return await r.json(); // {ok, username, password}
+    }
+    async function userLogin(username, password){
+      const r = await fetch(WORKER_URL + '/?route=user-login', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ username, password })
+      });
+      return await r.json(); // {ok, token}
+    }
+
+    // ================== State ==================
+    let currentOrderId = '';
+    let pollTimer = null;
+    let opened = null;
+    let lastClaim = { username:'', password:'' };
+
+    function startPolling(){
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async ()=>{
+        try{
+          const st = await checkStatus(currentOrderId);
+          const s = String(st.transaction_status || 'unknown').toLowerCase();
+          setStatus(s, s==='settlement' ? 'text-bg-success' : 'text-bg-secondary');
+          if (s === 'settlement' || (s==='capture' && (st.fraud_status||'')!=='challenge') || s==='success'){
+            clearInterval(pollTimer);
+            await afterPaid();
+          }
+        }catch(e){ console.warn('poll error', e); }
+      }, 5000);
+    }
+
+    async function afterPaid(){
+      try{
+        const contact = $('contact').value.trim();
+        const claim = await orderClaim(currentOrderId, contact);
+        if (!claim.ok) throw new Error(claim.error || 'Klaim akun gagal');
+
+        lastClaim.username = claim.username || '';
+        lastClaim.password = claim.password || '';
+
+        $('uOut').textContent = lastClaim.username || '(tersimpan)';
+        $('pOut').textContent = lastClaim.password || '(tersimpan)';
+        $('credBox').classList.remove('d-none');
+        $('btnLoginNow').disabled = !(lastClaim.username && lastClaim.password);
+
+        // ⛔ Tidak auto-login. Pengguna diminta menyimpan kredensial dulu.
+        showAlert('success', 'Pembayaran sukses. Kredensial dibuat. Simpan lalu klik "Login Sekarang" jika siap.');
+      }catch(e){ showAlert('danger', e.message || String(e)); }
+    }
+
+    // ================== Prefill ==================
+    (()=>{
+      const pre = (()=>{ try{ return JSON.parse(localStorage.getItem('umkm_prefill')||'{}'); }catch(_){ return {}; }})();
+      $('name').value    = qs.get('name')    || pre.name    || '';
+      $('contact').value = qs.get('contact') || pre.contact || '';
+    })();
+
+    // ================== Submit Form ==================
+    $('form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      hideAlert();
+      const name = $('name').value.trim();
+      const contact = $('contact').value.trim();
+      if (!name || !contact) return;
+
+      savePrefill(name, contact);
+      togglePayLoading(true);
+
+      try{
+        // Buka tab kosong dulu agar tidak diblokir popup blocker
+        opened = window.open('about:blank', '_blank');
+        const o = await createOrder(name, contact);
+
+        currentOrderId = o.order_id;
+        $('orderId').textContent = currentOrderId;
+        $('orderBox').classList.remove('d-none');
+        $('btnStatus').disabled = false;
+        setStatus('menunggu pembayaran', 'text-bg-secondary');
+
+        // Arahkan tab ke Snap
+        if (opened) opened.location.href = o.redirect_url;
+        else window.open(o.redirect_url, '_blank');
+
+        // Mulai polling
+        startPolling();
+      }catch(err){
+        showAlert('danger', err.message || String(err));
+        if (opened) try{ opened.close(); }catch(_){}
+      }finally{
+        togglePayLoading(false);
+      }
+    });
+
+    // ================== Redirect dari Snap ==================
+    (async ()=>{
+      const qOrder = qs.get('order_id');
+      if (qOrder){
+        currentOrderId = qOrder;
+        $('orderId').textContent = currentOrderId;
+        $('orderBox').classList.remove('d-none');
+
+        const s = (qs.get('transaction_status')||'').toLowerCase();
+        if (s==='settlement' || s==='success' || (s==='capture' && (qs.get('fraud_status')||'')!=='challenge')){
+          setStatus('settlement', 'text-bg-success');
+          await afterPaid(); // tetap tidak auto-login
+        } else {
+          setStatus('memeriksa…', 'text-bg-secondary');
+          startPolling();
+        }
+      }
+    })();
+
+    // ================== Cek Status Manual ==================
+    $('btnStatus').addEventListener('click', async ()=>{
+      if (!currentOrderId) return;
+      try{
+        const st = await checkStatus(currentOrderId);
+        const s = String(st.transaction_status || 'unknown').toLowerCase();
+        setStatus(s, s==='settlement' ? 'text-bg-success' : 'text-bg-secondary');
+        if (s==='settlement' || (s==='capture' && (st.fraud_status||'')!=='challenge') || s==='success'){
+          await afterPaid(); // tetap tidak auto-login
+        }
+      }catch(e){ showAlert('danger', String(e)); }
+    });
+
+    // ================== Aksi credensial ==================
+    $('btnCopy').addEventListener('click', async ()=>{
+      const u = $('uOut').textContent || '';
+      const p = $('pOut').textContent || '';
+      try{
+        await navigator.clipboard.writeText(`Username: ${u}\nPassword: ${p}\nOrder ID: ${currentOrderId}`);
+        showAlert('success', 'Credensial disalin ke clipboard.');
+      }catch(_){
+        showAlert('warning', 'Gagal menyalin. Salin manual.');
+      }
+    });
+
+    $('btnSaveTxt').addEventListener('click', ()=>{
+      const u = $('uOut').textContent || '';
+      const p = $('pOut').textContent || '';
+      const blob = new Blob([`umkmall credentials\n\nUsername: ${u}\nPassword: ${p}\nOrder ID: ${currentOrderId}\n`], {type:'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `umkmall-${currentOrderId}.txt`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    });
+
+    // ================== Login Sekarang (manual, one-click) ==================
+    $('btnLoginNow').addEventListener('click', async ()=>{
+      const u = lastClaim.username;
+      const p = lastClaim.password;
+      if (!u || !p) {
+        return showAlert('warning', 'Credensial belum tersedia. Tunggu klaim akun.');
+      }
+      try{
+        const login = await userLogin(u, p);
+        if (login.ok && login.token){
+          localStorage.setItem('umkm_token', login.token);
+          showAlert('success', 'Login berhasil. Mengarahkan ke kalkulator…');
+          setTimeout(()=>location.href='./index.html', 800);
+        } else {
+          showAlert('warning', 'Akun dibuat, namun login otomatis gagal. Coba login manual.');
+        }
+      }catch(e){
+        showAlert('danger', e.message || 'Login gagal. Coba login manual di halaman Login.');
+      }
+    });
+  </script>
+</body>
+</html>

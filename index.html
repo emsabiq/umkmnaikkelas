@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <!-- ===== EARLY GUARD (no flicker) ===== -->
+  <style id="gate-hide">html{visibility:hidden}</style>
+  <script>
+  (function(){
+    try{
+      if(!localStorage.getItem('umkm_token')){
+        location.replace('./login.html?next='+encodeURIComponent(location.href));
+        return;
+      }
+      var s=document.getElementById('gate-hide'); if(s) s.remove();
+      document.documentElement.style.visibility='visible';
+    }catch(e){
+      location.replace('./login.html?next='+encodeURIComponent(location.href));
+    }
+  })();
+  </script>
+  <!-- ===== /EARLY GUARD ===== -->
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UMKM Naik Kelas - HPP</title>
+  <meta name="description" content="Alat praktis untuk UMKM menghitung HPP, menentukan harga jual, dan simulasi laba. Data tersimpan di perangkat Anda (localStorage).">
+
+  <!-- Bootstrap CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link href="./styles.css" rel="stylesheet" />
+</head>
+<body>
+  <!-- NAVBAR: single row -->
+  <nav class="navbar navbar-light bg-brand shadow-sm sticky-top">
+    <div class="container-xxl px-3 d-flex align-items-center justify-content-between gap-2">
+      <a class="navbar-brand d-flex align-items-center gap-2 m-0" href="#">
+        <span class="brand-badge"></span>
+        <span class="brand-title">Kalkulator HPP & Harga Jual</span>
+      </a>
+
+      <!-- Actions: satu baris, bisa scroll horizontal jika sempit -->
+      <div class="actions d-flex align-items-center gap-2 flex-nowrap overflow-auto">
+        <button class="btn btn-outline-light" id="btnNew" data-bs-toggle="tooltip" data-bs-title="Buat resep kosong" aria-label="Buat resep kosong">
+          <i class="bi bi-file-earmark-plus"></i>
+        </button>
+
+        <button class="btn btn-light" id="btnSave" data-bs-toggle="tooltip" data-bs-title="Simpan ke perangkat ini" aria-label="Simpan ke perangkat ini">
+          <i class="bi bi-save"></i>
+        </button>
+
+        <select class="form-select form-select-sm saved-select" id="savedSelect" aria-label="Resep tersimpan">
+          <option value="">— Resep Tersimpan —</option>
+        </select>
+
+        <button class="btn btn-outline-light" id="btnExport" data-bs-toggle="tooltip" data-bs-title="Ekspor ke JSON" aria-label="Ekspor ke JSON">
+          <i class="bi bi-box-arrow-down"></i>
+        </button>
+
+        <button class="btn btn-outline-light" id="btnImport" data-bs-toggle="modal" data-bs-target="#modalImport" data-bs-title="Impor dari JSON" aria-label="Impor dari JSON">
+          <i class="bi bi-box-arrow-in-up"></i>
+        </button>
+
+        <!-- Trigger kecil khusus HP untuk membuka daftar resep -->
+        <button
+          class="btn btn-outline-light btn-saved-xs"
+          id="btnSaved"
+          data-bs-toggle="modal"
+          data-bs-target="#modalSaved"
+          data-bs-title="Resep tersimpan"
+          aria-label="Resep tersimpan">
+          <i class="bi bi-journal-bookmark"></i>
+        </button>
+
+        <button class="btn btn-accent" id="btnPrint" data-bs-toggle="tooltip" data-bs-title="Cetak ringkas" aria-label="Cetak ringkas">
+          <i class="bi bi-printer"></i>
+        </button>
+
+        <!-- Preferensi -->
+        <button class="btn btn-outline-light" id="btnPrefs"
+                data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings"
+                aria-controls="offcanvasSettings" data-bs-title="Pengaturan & Preferensi" aria-label="Pengaturan & Preferensi">
+          <i class="bi bi-gear"></i>
+        </button>
+
+        <!-- Logout (merah) — tetap satu baris -->
+        <button class="btn btn-danger" id="btnLogout" data-bs-toggle="tooltip" data-bs-title="Keluar (logout)" aria-label="Keluar (logout)"
+                onclick="try{localStorage.removeItem('umkm_token')}catch(_){};location.replace('./login.html')">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-xxl py-3">
+    <div id="alertContainer" class="mb-2"></div>
+
+    <!-- ===== RINGKASAN DI ATAS ===== -->
+
+    <!-- (6) Ringkasan HPP -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-calculator"></i> (6) Ringkasan HPP</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6"><div class="kpi"><div class="kpi-label">Bahan (setelah susut)</div><div class="kpi-value" id="outMat">Rp 0</div></div></div>
+          <div class="col-6"><div class="kpi"><div class="kpi-label">Tenaga kerja</div><div class="kpi-value" id="outLabor">Rp 0</div></div></div>
+          <div class="col-6"><div class="kpi"><div class="kpi-label">Biaya usaha lainnya</div><div class="kpi-value" id="outOH">Rp 0</div></div></div>
+          <div class="col-6"><div class="kpi"><div class="kpi-label">PPN</div><div class="kpi-value" id="outTax">Rp 0</div></div></div>
+        </div>
+        <hr />
+        <div class="row g-2">
+          <div class="col-6"><span class="badge text-bg-soft">HPP per <strong>batch</strong>: <span id="hppBatch">Rp 0</span></span></div>
+          <div class="col-6"><span class="badge text-bg-soft">HPP per <strong>unit</strong>: <span id="hppUnit">Rp 0</span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- (7) Rekomendasi Harga -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-cash-coin"></i> (7) Rekomendasi Harga</h2>
+      </div>
+      <div class="card-body">
+        <div class="row row-cols-1 row-cols-sm-3 g-2 text-center pricegrid">
+          <div class="col">
+            <div class="pricecard h-100" id="cardLow">
+              <h3 class="h6">Kompetitif</h3>
+              <div class="display-6" id="pLow">Rp 0</div>
+              <div class="row g-1 small mt-1">
+                <div class="col-6"><div class="mini-box">Laba/unit<br><strong id="pfLow">Rp 0</strong></div></div>
+                <div class="col-6"><div class="mini-box">Margin<br><strong id="mgLow">0%</strong></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="pricecard h-100" id="cardMid">
+              <h3 class="h6">Standar</h3>
+              <div class="display-6" id="pMid">Rp 0</div>
+              <div class="row g-1 small mt-1">
+                <div class="col-6"><div class="mini-box">Laba/unit<br><strong id="pfMid">Rp 0</strong></div></div>
+                <div class="col-6"><div class="mini-box">Margin<br><strong id="mgMid">0%</strong></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="pricecard h-100" id="cardHigh">
+              <h3 class="h6">Premium</h3>
+              <div class="display-6" id="pHigh">Rp 0</div>
+              <div class="row g-1 small mt-1">
+                <div class="col-6"><div class="mini-box">Laba/unit<br><strong id="pfHigh">Rp 0</strong></div></div>
+                <div class="col-6"><div class="mini-box">Margin<br><strong id="mgHigh">0%</strong></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr />
+        <div class="text-muted small">Harga sudah memasukkan PPN (jika diisi). Biaya kemasan/unit ikut menghitung HPP.</div>
+      </div>
+    </section>
+
+    <!-- (1) Data Produk -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-box"></i> (1) Data Produk</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="prodName">Nama Produk</label>
+            <input id="prodName" class="form-control" placeholder="Contoh: Dimsum Mentai – Box 6" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="prodCat">Kategori</label>
+            <select id="prodCat" class="form-select">
+              <option value="F&amp;B" selected>Makanan &amp; Minuman</option>
+              <option value="Sandang">Sandang</option>
+              <option value="Jasa">Jasa</option>
+              <option value="Pabrik">Manufaktur</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="prodImg">Gambar (opsional)</label>
+            <input id="prodImg" type="file" accept="image/*" class="form-control" />
+          </div>
+          <div class="col-12 col-md-6">
+            <img id="imgPreview" class="img-fluid rounded border d-none" alt="Preview produk" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- (2) Biaya Bahan & Variabel (BOM) -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle pe-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <h2 class="h6 mb-0"><i class="bi bi-list-check"></i> (2) Biaya Bahan &amp; Variabel</h2>
+          <span class="badge rounded-pill text-bg-soft" id="matBadge">0 bahan</span>
+          <span class="badge rounded-pill text-bg-soft" id="matTotalBadge">Total bahan: Rp 0</span>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-outline-secondary" id="addRow"><i class="bi bi-plus-lg"></i> Tambah</button>
+          <button class="btn btn-outline-secondary" id="addCommon"><i class="bi bi-stars"></i> Contoh</button>
+          <button class="btn btn-outline-danger" id="clearBom"><i class="bi bi-x-lg"></i> Bersihkan</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0" id="bomTable" aria-label="Bill of Materials">
+          <thead class="table-light">
+            <tr>
+              <th style="min-width:220px">Nama bahan/biaya</th>
+              <th class="w-10">Qty</th>
+              <th class="w-10">Satuan</th>
+              <th class="w-15">Biaya per satuan</th>
+              <th class="w-15">Subtotal</th>
+              <th class="text-end w-5">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="bomBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card-footer small text-muted">
+        Tips: tekan <kbd>Tab</kbd> untuk pindah kolom cepat. Impor/Ekspor ada di menu atas.
+      </div>
+    </section>
+
+    <!-- (3) Biaya Tetap dialokasikan -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-bank"></i> (3) Biaya Tetap yang Dialokasikan</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="targetSalesMonthly">Target jual per bulan (unit)</label>
+            <input id="targetSalesMonthly" type="number" min="1" class="form-control" placeholder="Mis. 900" />
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-text">Dipakai untuk membagi biaya tetap bulanan → biaya tetap per unit.</div>
+          </div>
+        </div>
+
+        <div class="table-responsive mt-2">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nama biaya</th>
+                <th class="w-15">Biaya/bulan (Rp)</th>
+                <th class="text-end w-5">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="fixedBody"></tbody>
+          </table>
+        </div>
+
+        <div class="mt-2">
+          <button class="btn btn-sm btn-outline-secondary" id="addFixed"><i class="bi bi-plus"></i> Tambah Biaya</button>
+          <span class="badge text-bg-soft ms-2">Total biaya tetap/bln: <strong id="fixedMonthlyTotal">Rp 0</strong></span>
+          <span class="badge text-bg-soft ms-2">Biaya tetap/unit: <strong id="fixedPerUnit">Rp 0</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- (4) Parameter Produksi -->
+    <section class="card shadow-sm mb-4">
+      <div class="card-header bg-light-subtle d-flex align-items-center justify-content-between">
+        <h2 class="h6 mb-0"><i class="bi bi-receipt-cutoff"></i> (4) Parameter Produksi</h2>
+      </div>
+
+      <div class="card-body pt-3 pb-2">
+        <div class="row g-3 align-items-end">
+          <div class="col-6 col-xl-3">
+            <label for="yield" class="form-label">Hasil per batch (unit)</label>
+            <input id="yield" type="number" min="1" value="10" class="form-control" />
+          </div>
+          <div class="col-6 col-xl-3">
+            <label for="packCost" class="form-label">Kemasan per unit</label>
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input id="packCost" type="number" min="0" step="0.01" value="0" class="form-control" />
+            </div>
+          </div>
+          <div class="col-6 col-xl-2">
+            <label for="shrink" class="form-label">Susut (%)</label>
+            <input id="shrink" type="number" min="0" max="90" step="0.1" value="0" class="form-control" />
+          </div>
+          <div class="col-6 col-xl-2">
+            <label for="overheadPct" class="form-label">Biaya usaha lain (%)</label>
+            <input id="overheadPct" type="number" min="0" max="200" step="0.1" value="10" class="form-control" />
+          </div>
+          <div class="col-6 col-xl-2">
+            <label for="taxPct" class="form-label">PPN (%)</label>
+            <input id="taxPct" type="number" min="0" max="30" step="0.1" value="0" class="form-control" />
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1 align-items-end">
+          <div class="col-12 col-md-5 col-xl-4">
+            <label for="laborMode" class="form-label">Biaya tenaga kerja</label>
+            <select id="laborMode" class="form-select">
+              <option value="fixed">Tetap per batch</option>
+              <option value="hourly">Tarif/jam × jam per batch</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-3 col-xl-2">
+            <label id="laborLabelA" for="laborA" class="form-label">Biaya/batch</label>
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input id="laborA" type="number" min="0" step="0.01" value="0" class="form-control" />
+            </div>
+          </div>
+          <div class="col-6 col-md-2 col-xl-2">
+            <label id="laborLabelB" for="laborB" class="form-label">Jam/batch</label>
+            <input id="laborB" type="number" min="0" step="0.01" value="0" class="form-control" />
+          </div>
+
+          <div class="col-12 col-md-4 col-xl-4">
+            <div class="row g-2">
+              <div class="col-4">
+                <label for="mLow" class="form-label">Margin KOMP (%)</label>
+                <input id="mLow" type="number" min="0" step="0.1" value="20" class="form-control" />
+              </div>
+              <div class="col-4">
+                <label for="mMid" class="form-label">Margin STD (%)</label>
+                <input id="mMid" type="number" min="0" step="0.1" value="35" class="form-control" />
+              </div>
+              <div class="col-4">
+                <label for="mHigh" class="form-label">Margin PREM (%)</label>
+                <input id="mHigh" type="number" min="0" step="0.1" value="50" class="form-control" />
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4 col-xl-3">
+            <label for="rounding" class="form-label">Pembulatan harga</label>
+            <select id="rounding" class="form-select">
+              <option value="1">Tanpa pembulatan</option>
+              <option value="50">Ke 50 terdekat</option>
+              <option value="100" selected>Ke 100 terdekat</option>
+              <option value="500">Ke 500 terdekat</option>
+              <option value="1000">Ke 1.000 terdekat</option>
+              <option value="up1000">Naik ke 1.000 terdekat</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- (5) Target & Proyeksi -->
+    <section class="card shadow-sm mb-4">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-bullseye"></i> (5) Target & Proyeksi</h2>
+      </div>
+      <div class="card-body">
+        <label for="targetProfitMonthly" class="form-label">Target laba bersih per bulan</label>
+        <div class="input-group mb-2">
+          <span class="input-group-text">Rp</span>
+          <input id="targetProfitMonthly" type="number" min="0" step="1000" class="form-control" placeholder="Contoh: 10.000.000" />
+        </div>
+
+        <div class="row g-2">
+          <div class="col-4">
+            <div class="kpi text-center">
+              <div class="kpi-label">Target jual / hari</div>
+              <div class="kpi-value" id="targetPerDay">0 pcs</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="kpi text-center">
+              <div class="kpi-label">Omzet / bulan</div>
+              <div class="kpi-value" id="potentialRevenue">Rp 0</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="kpi text-center">
+              <div class="kpi-label">Biaya tetap / bulan</div>
+              <div class="kpi-value" id="fixedMonthly">Rp 0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- (8) Grafik -->
+    <section class="card shadow-sm mb-3">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-graph-up-arrow"></i> (8) Grafik Penjualan & Laba</h2>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartProfit"></canvas></div>
+        <div class="chart-note mt-2">Grafik menggunakan asumsi &amp; parameter di atas.</div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm mb-4">
+      <div class="card-header bg-light-subtle">
+        <h2 class="h6 mb-0"><i class="bi bi-activity"></i> (8b) Grafik Proyeksi Harian (Rame/Target/Sepi)</h2>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+        <div class="chart-note mt-2">Tooltip menampilkan 3 skenario per hari (akumulatif).</div>
+      </div>
+    </section>
+
+    <div class="text-center small text-muted mb-3">
+      Dibuat untuk pelaku usaha • Data disimpan di perangkat Anda (localStorage). Jika cache dibersihkan, data ikut terhapus.
+    </div>
+  </main>
+
+  <!-- OFFCANVAS: Preferensi -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettingsLabel">
+    <div class="offcanvas-header">
+      <h2 class="offcanvas-title h6" id="offcanvasSettingsLabel"><i class="bi bi-gear"></i> Preferensi</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="mb-3">
+        <label class="form-label">Format angka</label>
+        <select id="numberFormat" class="form-select">
+          <option value="id-ID" selected>Indonesia (Rp, titik ribuan)</option>
+          <option value="en-US">US (USD, koma ribuan)</option>
+        </select>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label">Simpan otomatis</label>
+          <select id="autosaveMode" class="form-select">
+            <option value="off">Mati</option>
+            <option value="on">Nyala (tiap 5 detik)</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label class="form-label">Presisi perhitungan</label>
+          <select id="precision" class="form-select">
+            <option value="0">0 desimal</option>
+            <option value="2" selected>2 desimal</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">Skema HPP</label>
+        <select id="hppSchema" class="form-select">
+          <option value="default" selected>Default</option>
+          <option value="oh_on_all">Operasional lain atas semua</option>
+          <option value="tax_after_oh">PPN setelah operasional lain</option>
+        </select>
+      </div>
+
+      <hr />
+
+      <div class="mb-2 d-flex align-items-center justify-content-between">
+        <label class="form-label mb-0">Template margin per kategori</label>
+        <div class="form-check m-0">
+          <input class="form-check-input" type="checkbox" value="1" id="autoApplyCategory" checked>
+          <label class="form-check-label small" for="autoApplyCategory">Otomatis terapkan ke Margin</label>
+        </div>
+      </div>
+
+      <div id="categoryMarginArea" class="vstack gap-2"></div>
+      <button class="btn btn-sm btn-outline-secondary mt-2" id="btnAddCategory"><i class="bi bi-plus"></i> Tambah Kategori</button>
+
+      <hr />
+      <button class="btn btn-sm btn-outline-danger mt-2" id="btnResetPrefs">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset Preferensi
+      </button>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal fade" id="modalSave" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h6"><i class="bi bi-save2"></i> Simpan Resep</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <label for="saveName" class="form-label">Nama Resep</label>
+        <input id="saveName" class="form-control" placeholder="Mis. Dimsum Mentai – Box 6" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary" id="doSave">Simpan</button>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="modal fade" id="modalImport" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h6"><i class="bi bi-box-arrow-in-up"></i> Impor Resep (JSON)</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="importFile" accept="application/json" class="form-control" />
+        <div class="form-text">Pilih file JSON hasil ekspor dari aplikasi ini.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-primary" id="doImport">Impor</button>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="modal fade" id="modalSaved" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h6"><i class="bi bi-journal-bookmark"></i> Resep Tersimpan</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <div id="savedList" class="list-group small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastArea"></div>
+
+  <!-- Bootstrap JS bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <!-- Inisialisasi tooltip global -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+      });
+    });
+  </script>
+
+  <script>
+    // Sinkronkan isi modal dengan <select> setiap kali modal dibuka
+    document.getElementById('modalSaved').addEventListener('shown.bs.modal', () => {
+      const list = document.getElementById('savedList');
+      const sel  = document.getElementById('savedSelect');
+      list.innerHTML = '';
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return; // skip placeholder
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = opt.textContent || '(tanpa nama)';
+        btn.onclick = () => {
+          sel.value = opt.value;
+          sel.dispatchEvent(new Event('change')); // biar logic app.js tetap jalan
+          bootstrap.Modal.getInstance(document.getElementById('modalSaved')).hide();
+        };
+        list.appendChild(btn);
+      });
+      if (!list.children.length) {
+        list.innerHTML = '<div class="text-muted">Belum ada resep tersimpan.</div>';
+      }
+    });
+  </script>
+
+  <!-- App utama & Preferensi -->
+  <script src="./app.js" defer></script>
+  <script src="./prefs.js" defer></script>
+</body>
+</html>

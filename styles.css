@@ -1,0 +1,297 @@
+/* ==========================================================
+   FILE: styles.css
+   HPP Calculator – Bootstrap overrides + clean light theme
+   Scope: index.html (utama), aman untuk halaman lain.
+   Brand: #356f6b (primary), #244e4b (darker)
+   NOTE: Mode terang dipaksa agar tidak ikut preferensi OS.
+   ========================================================== */
+
+/* ---------- Tokens ---------- */
+:root{
+  --brand:#356f6b;
+  --brand-600:#2d615d;
+  --brand-700:#244e4b;
+  --brand-300:#7db6b2;
+  --accent:#0ea5a7;
+
+  --ink:#0f172a;            /* teks utama */
+  --muted:#475569;          /* teks sekunder */
+  --muted-2:#64748b;
+
+  --bg:#ffffff;             /* latar halaman */
+  --card:#ffffff;           /* kartu putih */
+  --soft:#f3f7f6;           /* elemen lembut */
+  --soft-2:#eef5f4;
+
+  --ring:rgba(53,111,107,.28);
+  --border:#e6efee;
+  --shadow:0 6px 24px rgba(27,46,45,.06), 0 2px 10px rgba(27,46,45,.04);
+
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+
+  --radius-sm:10px;
+  --radius:14px;
+  --radius-lg:18px;
+
+  --speed-1:.18s;
+  --speed-2:.28s;
+}
+
+/* ---------- Page base (paksa terang) ---------- */
+html,body{height:100%;background:var(--bg);color:var(--ink)}
+body{
+  font:15.5px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Matikan efek dark-mode bawaan OS */
+@media (prefers-color-scheme: dark){
+  html,body{background:#ffffff;color:#0f172a}
+}
+
+/* Hargai preferensi: kurangi animasi */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important; transition:none!important; scroll-behavior:auto!important}
+}
+
+/* Link */
+a{color:var(--brand-700);text-decoration:none}
+a:hover{color:var(--brand);text-decoration:underline}
+
+/* ---------- Focus ring & transitions ---------- */
+:where(input,select,textarea,button,.btn,.form-check-input):focus{
+  outline:0!important; box-shadow:0 0 0 .2rem var(--ring)!important;
+}
+.btn, .form-control, .form-select, .card, .badge{ transition:all var(--speed-2) ease }
+
+/* ---------- Navbar / Brand (terang) ---------- */
+.bg-brand{ background:#ffffff!important; border-bottom:1px solid var(--border) }
+.navbar{
+  --bs-navbar-color:#1f2937;
+  --bs-navbar-hover-color:var(--brand-700);
+  --bs-navbar-brand-color:#111827;
+  --bs-navbar-brand-hover-color:var(--brand-700);
+}
+/* susun flex agar brand prioritas ruang, actions menempel kanan */
+.navbar .container-xxl{ display:flex; align-items:center; justify-content:space-between; gap:.5rem }
+.navbar .navbar-brand{ display:flex; align-items:center; gap:.5rem; flex:1 1 auto; min-width:0 }
+.navbar .brand-badge{
+  width:28px;height:28px;border-radius:8px;
+  background:conic-gradient(from 220deg at 50% 50%, var(--brand) 0, #5aa39c 40%, #8bd2cb 100%);
+  box-shadow:0 2px 10px rgba(53,111,107,.20);
+}
+.navbar .brand-title{
+  font-weight:700; letter-spacing:.2px;
+  white-space:normal;           /* JUDUL TIDAK “…”; boleh membungkus */
+  overflow:visible; text-overflow:unset;
+}
+
+/* === Actions bar (desktop: tidak scroll; mobile: bisa geser) === */
+.actions{
+  display:flex; align-items:center; gap:.5rem;
+  flex-wrap:nowrap; overflow:visible;   /* desktop: NO SCROLLBAR */
+}
+.actions .btn, .actions .form-select{ border-radius:var(--radius-sm) }
+
+/* ---------- Buttons ---------- */
+.btn-accent{
+  --bs-btn-color:#fff; --bs-btn-bg:var(--accent); --bs-btn-border-color:var(--accent);
+  --bs-btn-hover-bg:#0b8b8d; --bs-btn-hover-border-color:#0b8b8d;
+  box-shadow:0 6px 16px rgba(14,165,167,.18);
+}
+.btn-accent:active{ transform:translateY(1px) }
+
+.btn-outline-light{
+  --bs-btn-color:#0f172a; --bs-btn-border-color:#cbd5e1;
+  --bs-btn-hover-bg:var(--soft-2); --bs-btn-hover-border-color:var(--brand);
+  --bs-btn-hover-color:var(--brand-700);
+}
+.btn-outline-secondary{
+  --bs-btn-color:#334155; --bs-btn-border-color:#cbd5e1;
+  --bs-btn-hover-bg:var(--soft-2); --bs-btn-hover-border-color:var(--brand);
+  --bs-btn-hover-color:var(--brand-700);
+}
+.btn-outline-danger{ --bs-btn-hover-bg:#fff1f1 }
+.btn-logout{
+  --bs-btn-color:#fff; --bs-btn-bg:var(--danger); --bs-btn-border-color:var(--danger);
+  --bs-btn-hover-bg:#d63636; --bs-btn-hover-border-color:#d63636;
+}
+
+/* Icon jarak rapi */
+.btn .bi{ vertical-align:-.125em; margin-right:.25rem }
+.actions .btn .bi{ margin-right:0 } /* icon-only di navbar */
+
+/* ---------- Cards / Sections ---------- */
+.card{
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--card);
+  box-shadow:var(--shadow);
+}
+.card:hover{ box-shadow:0 10px 28px rgba(27,46,45,.08), 0 3px 12px rgba(27,46,45,.05) }
+.card-header{
+  border-bottom-color:var(--border);
+  background:linear-gradient(180deg,#f8fbfb 0%,#ffffff 100%);
+}
+
+/* ---------- Soft badges & chips ---------- */
+.text-bg-soft{ background:var(--soft); color:var(--brand-700); border:1px dashed #cfe4e1 }
+.badge{ font-weight:600; border-radius:999px }
+.badge-chip{
+  background:#eef5f4; color:#0b3e3a; border:1px solid #d7e6e4; padding:.35rem .6rem;
+}
+
+/* ---------- KPI widgets ---------- */
+.kpi{
+  padding:.7rem .8rem; border:1px dashed #d7e6e4; border-radius:.9rem;
+  background:linear-gradient(180deg,#f8fbfb 0,#fff 100%);
+}
+.kpi .kpi-label{ font-size:.82rem; color:#334155 }
+.kpi .kpi-value{ font-weight:700; letter-spacing:.2px }
+
+/* ---------- Price cards ---------- */
+.pricecard{
+  border:1px solid #dbe9e7; border-radius:12px; padding:.95rem; background:#fff;
+  display:flex; flex-direction:column; justify-content:flex-start; transform:translateZ(0);
+}
+.pricecard h3{ color:#0b3e3a; margin-bottom:.25rem }
+.pricecard .display-6{ font-weight:800; letter-spacing:.2px }
+.pricecard:hover{
+  border-color:var(--brand-300);
+  box-shadow:0 10px 24px rgba(53,111,107,.10);
+  transform:translateY(-1px);
+}
+.mini-box{ border:1px dashed #d7e6e4; border-radius:.55rem; padding:.5rem .6rem; background:#f8fbfb }
+
+/* ---------- Tables ---------- */
+.table{ margin:0 }
+.table thead th{
+  white-space:nowrap; background:#f6fbfb; border-bottom:1px solid var(--border)!important;
+}
+.table tbody td{ vertical-align:middle }
+.table tbody tr:hover{ background:#fbfdfc }
+.w-5{width:5%}.w-10{width:10%}.w-12{width:12%}.w-15{width:15%}
+.table td .form-control,.table td .input-group{ min-width:120px }
+.table td .form-control-sm,.table td .input-group.input-group-sm{ min-width:110px }
+
+/* Sticky header opsional */
+.table-sticky thead th{ position:sticky; top:0; z-index:2 }
+
+/* ---------- Forms ---------- */
+.form-control,.form-select{ border-color:#d7e6e4; border-radius:12px }
+.form-control:focus,.form-select:focus{ border-color:var(--brand) }
+.input-group-text{ background:#f1f7f6; border-color:#d7e6e4 }
+.form-text{ color:var(--muted-2) }
+::placeholder{ color:#9aa5b1 }
+
+/* Hapus spinner number (Chrome) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+input[type=number]{ -moz-appearance:textfield }
+
+/* ---------- Offcanvas & Modals ---------- */
+.offcanvas .form-text{ color:var(--muted-2) }
+.modal-content{ border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow) }
+.modal-header{ background:#f8fbfb }
+
+/* ---------- Toast area layering ---------- */
+.toast-container{ z-index:1080 }
+
+/* ---------- Helpers ---------- */
+small,.small{ color:var(--muted) }
+hr{ opacity:.14 }
+.kbd, kbd{ background:#e8f2f0; border:1px solid #cfe4e1; padding:.1rem .35rem; border-radius:6px }
+
+/* ---------- Chart area ---------- */
+.chart-card .card-body{ padding-bottom:1rem }
+.chart-wrap{ position:relative; height:300px }
+.chart-wrap canvas{ display:block!important; width:100%!important; height:100%!important }
+@media (max-width:992px){ .chart-wrap{ height:260px } }
+@media (max-width:576px){ .chart-wrap{ height:220px } }
+
+/* Legenda & judul chart rapi */
+.chart-card .card-header{ display:flex; align-items:center; justify-content:space-between }
+.chart-note{ color:#6b7280; font-size:.85rem }
+
+/* ---------- Responsive tweaks (tablet & desktop) ---------- */
+@media (min-width:577px){
+  .saved-select{ max-width:240px }
+  .btn-saved-xs{ display:none!important }
+}
+
+/* === Compact navbar di HP: judul tampil penuh, ikon pas kiri–kanan === */
+@media (max-width: 576px){
+  /* tampilkan tombol “Saved” kecil & sembunyikan select panjang */
+  .saved-select{ display:none!important }
+  .btn-saved-xs{ display:inline-flex!important }
+
+  /* padding container lebih rapat */
+  .navbar .container-xxl{ padding-left:.5rem; padding-right:.5rem }
+
+  /* brand tidak ellipsis; boleh membungkus 2 baris */
+  .navbar .brand-badge{ width:24px; height:24px }
+  .navbar .brand-title{
+    font-size:.96rem; line-height:1.15;
+    white-space:normal; overflow:visible; text-overflow:unset;
+  }
+
+  /* actions: bisa geser, tanpa sisa kanan/kiri & tanpa scrollbar */
+  .actions{
+    gap:.35rem;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    padding-left:0; padding-right:0;
+  }
+  .actions::-webkit-scrollbar{ display:none } /* sembunyikan bar di mobile */
+  .actions .btn, .actions .form-select{ padding:.32rem .48rem }
+  .actions .btn .bi{ font-size:1rem; margin-right:0 }
+}
+
+/* ekstra rapat untuk layar sangat kecil */
+@media (max-width: 380px){
+  .navbar .brand-title{ font-size:.92rem }
+  .actions{ gap:.3rem }
+  .actions .btn, .actions .form-select{ padding:.28rem .42rem }
+  .actions .btn .bi{ font-size:.95rem }
+}
+
+/* ---------- Subtle entrance for main sections ---------- */
+@keyframes fadeUp{ from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.card{ animation:fadeUp .35s ease both }
+.card:nth-of-type(1){ animation-delay:.02s }
+.card:nth-of-type(2){ animation-delay:.05s }
+.card:nth-of-type(3){ animation-delay:.08s }
+.card:nth-of-type(4){ animation-delay:.11s }
+
+/* ---------- Print styles ---------- */
+@media print{
+  @page{ margin:14mm }
+  body{ background:#fff }
+  .navbar,.offcanvas,.toast-container,#alertContainer{ display:none!important }
+  .card{ box-shadow:none; border-color:#cfd8dc }
+  .card-header{ background:#f6f9f8 }
+  .btn,.form-text{ display:none!important }
+  .table th,.table td{ border-color:#cfd8dc!important }
+}
+
+/* ---------- Extras: tiny utilities ---------- */
+.shadow-soft{ box-shadow:var(--shadow) }
+.rounded-2xl{ border-radius:var(--radius-lg) }
+.text-muted-2{ color:var(--muted-2) }
+.bg-soft{ background:var(--soft) }
+.border-soft{ border-color:var(--border)!important }
+
+/* ---------- Pricegrid breathing space ---------- */
+.pricegrid{ row-gap:1rem }
+.pricegrid .pricecard .mini-box{ min-height:56px; display:flex; align-items:center; justify-content:center }
+
+/* ---------- Navbar tooltip color tweak ---------- */
+.tooltip-inner{ background:var(--brand-700) }
+.tooltip.bs-tooltip-auto[data-popper-placement^=top] .tooltip-arrow::before,
+.tooltip.bs-tooltip-top .tooltip-arrow::before{ border-top-color:var(--brand-700) }
+
+/* ---------- Mobile-only “Saved recipes” trigger (hidden by default) ---------- */
+.btn-saved-xs{ display:none }

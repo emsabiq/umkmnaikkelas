@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>UMKM Naik Kelas — Kalkulator HPP untuk UMKM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- SEO & OG -->
+  <meta name="description" content="Hitung HPP & atur harga jual UMKM lebih cepat. Bayar sekali Rp 10.000, pakai selamanya. Data resep tersimpan di perangkat (localStorage).">
+  <meta property="og:title" content="umkmall — Kalkulator HPP untuk UMKM">
+  <meta property="og:description" content="Hitung HPP & atur harga jual UMKM lebih cepat. Bayar sekali Rp 10.000, pakai selamanya.">
+  <meta property="og:type" content="website">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --brand:#2563eb; /* indigo-600 */
+      --brand-soft: #eef2ff;
+    }
+    html { scroll-behavior:smooth; }
+    body { background:#fff; }
+    .navbar { backdrop-filter: saturate(140%) blur(6px); }
+    .brand-badge{
+      width:34px;height:34px;border-radius:9px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      display:inline-block; position:relative;
+    }
+    .brand-badge:after{
+      content:"\f1ec"; /* calculator */
+      font: 900 16px "Font Awesome 6 Free";
+      color:#fff; position:absolute; left:50%; top:50%;
+      transform:translate(-50%,-50%);
+    }
+
+    /* HERO */
+    .hero{
+      background:
+        radial-gradient(1200px 480px at 20% -10%, #eef2ff 0, rgba(238,242,255,0) 60%),
+        radial-gradient(1000px 420px at 100% 0%, #ecfeff 0, rgba(236,254,255,0) 55%),
+        #ffffff;
+    }
+    .glass{
+      background: rgba(255,255,255,.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(15,23,42,.06);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(2,6,23,.08);
+    }
+    .check-pill{
+      background:#f8fafc;border:1px dashed #e2e8f0;border-radius:999px;
+      padding:.35rem .75rem;font-size:.85rem
+    }
+    .icon-circle{
+      width:42px;height:42px;border-radius:999px;
+      display:inline-flex;align-items:center;justify-content:center;
+      background:var(--brand-soft); color:var(--brand);
+    }
+    .feature .icon-circle{ width:36px;height:36px; }
+
+    .price-tag{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:#f1f5ff;border:1px solid #e5e7eb;border-radius:999px;
+      padding:.4rem .8rem;font-weight:600;color:#1f2937;
+    }
+    .muted{ color:#6b7280!important; }
+    .section-title{ font-weight:800; letter-spacing:-.02em; }
+    .shadow-soft{ box-shadow:0 10px 30px rgba(2,6,23,.06); }
+
+    /* FAQ caret */
+    .accordion-button::after{ transform:scale(.9); }
+    .accordion-button:focus{ box-shadow:none; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <span class="brand-badge"></span>
+        <span class="fw-bold">UMKM Naik Kelas</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="nav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" href="#fitur">Fitur</a></li>
+          <li class="nav-item"><a class="nav-link" href="#cara">Cara Kerja</a></li>
+          <li class="nav-item me-lg-2"><a class="btn btn-outline-secondary" href="./index.html"><i class="fa-solid fa-calculator me-1"></i> Masuk Kalkulator</a></li>
+          <li class="nav-item"><a class="btn btn-primary" href="#beli"><i class="fa-solid fa-bolt me-1"></i> Beli Sekarang</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero py-5">
+    <div class="container">
+      <div class="row g-4 align-items-center">
+        <div class="col-lg-6">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="check-pill"><i class="fa-solid fa-shield-check me-1 text-success"></i> Data tersimpan di perangkat (localStorage)</span>
+            <span class="check-pill d-none d-md-inline"><i class="fa-solid fa-qrcode me-1 text-primary"></i> Bayar via Midtrans</span>
+          </div>
+
+          <h1 class="display-5 fw-bold mb-3">Hitung HPP & atur harga jual <span class="text-primary">lebih cepat</span>.</h1>
+          <p class="lead text-muted mb-4">
+            Optimalkan margin, simulasikan skenario, dan cetak ringkasan rapi. Cocok untuk F&B, fashion, jasa, hingga manufaktur ringan.
+          </p>
+
+          <div class="glass p-3 p-md-4 mb-4 shadow-soft" id="beli">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+              <div class="price-tag"><i class="fa-solid fa-tags"></i> Bayar sekali <span class="text-primary">Rp 10.000</span> — akses selamanya</div>
+              <div class="small muted"><i class="fa-regular fa-circle-check me-1 text-success"></i> Lisensi personal UMKM</div>
+            </div>
+
+            <form id="leadForm" class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label mb-1">Nama</label>
+                <input class="form-control" id="fName" placeholder="Nama Anda" required>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label mb-1">Kontak (email/WA)</label>
+                <input class="form-control" id="fContact" placeholder="contoh: 0812xxxx / email" required>
+              </div>
+              <div class="col-12 d-grid d-md-block">
+                <button class="btn btn-primary">
+                  <i class="fa-solid fa-credit-card me-1"></i> Beli Sekarang
+                </button>
+              </div>
+            </form>
+            <div class="form-text mt-2">
+              Klik “Beli Sekarang” → diarahkan ke halaman pembayaran (Snap Midtrans). Setelah sukses, akun otomatis dibuat.
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <a href="#fitur" class="btn btn-outline-secondary"><i class="fa-solid fa-circle-down me-1"></i> Lihat Fitur</a>
+            <a href="./index.html" class="btn btn-link text-decoration-none"><i class="fa-solid fa-right-to-bracket me-1"></i> Sudah punya akun? Masuk</a>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="glass p-3 p-md-4">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="d-flex align-items-start gap-2">
+                  <span class="icon-circle"><i class="fa-solid fa-calculator"></i></span>
+                  <div>
+                    <div class="fw-semibold">HPP Otomatis</div>
+                    <small class="muted">BOM, biaya tenaga kerja, overhead, PPN, pembulatan.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-start gap-2">
+                  <span class="icon-circle"><i class="fa-solid fa-chart-line"></i></span>
+                  <div>
+                    <div class="fw-semibold">Grafik & Proyeksi</div>
+                    <small class="muted">Target laba, simulasi rame/sepi, ringkasan cetak.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-start gap-2">
+                  <span class="icon-circle"><i class="fa-solid fa-floppy-disk"></i></span>
+                  <div>
+                    <div class="fw-semibold">Simpan Lokal</div>
+                    <small class="muted">Resep & preferensi aman di perangkat Anda.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-start gap-2">
+                  <span class="icon-circle"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                  <div>
+                    <div class="fw-semibold">Siap Dikembangkan</div>
+                    <small class="muted">Layanan lain bisa ditambah kapan saja.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="ratio ratio-16x9 border rounded-4 bg-light d-flex align-items-center justify-content-center">
+                  <div class="text-center p-3">
+                    <div class="display-6">🧮</div>
+                    <div class="fw-semibold mt-2">Preview Kalkulator HPP</div>
+                    <small class="text-secondary">Resep & bahan tersimpan di perangkat Anda</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /glass -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FITUR -->
+  <section id="fitur" class="py-5">
+    <div class="container">
+      <h2 class="section-title h3 mb-4">Fitur Utama</h2>
+      <div class="row g-3 g-md-4">
+        <div class="col-md-4">
+          <div class="feature p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-list-check"></i></div>
+            <div class="fw-semibold mb-1">BOM fleksibel</div>
+            <div class="muted small">Tambah bahan, biaya variabel, kemasan per unit, susut, dan pembulatan harga.</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-file-lines"></i></div>
+            <div class="fw-semibold mb-1">Cetak & ekspor</div>
+            <div class="muted small">Ringkasan siap cetak, impor/ekspor JSON untuk backup sederhana.</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-lock"></i></div>
+            <div class="fw-semibold mb-1">Akses terkunci</div>
+            <div class="muted small">Hanya user berbayar yang bisa membuka kalkulator (token login).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CARA KERJA -->
+  <section id="cara" class="py-5 bg-light">
+    <div class="container">
+      <h2 class="section-title h3 mb-4">Cara Kerja</h2>
+      <div class="row g-3 g-md-4">
+        <div class="col-md-3">
+          <div class="p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-bag-shopping"></i></div>
+            <div class="fw-semibold">1) Isi data</div>
+            <small class="muted">Masukkan nama & kontak.</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-wallet"></i></div>
+            <div class="fw-semibold">2) Bayar</div>
+            <small class="muted">Dialihkan ke Snap Midtrans (metode aktif di akunmu).</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-user-check"></i></div>
+            <div class="fw-semibold">3) Terima akun</div>
+            <small class="muted">Username & password tampil di halaman bayar.</small>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 border rounded-4 h-100">
+            <div class="icon-circle mb-2"><i class="fa-solid fa-chart-simple"></i></div>
+            <div class="fw-semibold">4) Pakai kalkulator</div>
+            <small class="muted">Login otomatis & langsung hitung HPP.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="py-5">
+    <div class="container">
+      <h2 class="section-title h3 mb-4">Pertanyaan Umum</h2>
+      <div class="accordion" id="faq">
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#f1">
+              Apakah data tersimpan di server?
+            </button>
+          </h2>
+        <div id="f1" class="accordion-collapse collapse show" data-bs-parent="#faq">
+          <div class="accordion-body">
+            Tidak. Resep dan preferensi Anda disimpan di perangkat (localStorage). Jika cache dibersihkan, data ikut terhapus.
+          </div>
+        </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f2">
+              Metode pembayaran apa saja yang didukung?
+            </button>
+          </h2>
+          <div id="f2" class="accordion-collapse collapse" data-bs-parent="#faq">
+            <div class="accordion-body">
+              Mengikuti metode yang aktif di akun Midtrans Anda (QRIS, e-wallet, VA, kartu, dll). Kami memakai Snap Midtrans.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#f3">
+              Apakah bisa tambah layanan selain kalkulator?
+            </button>
+          </h2>
+          <div id="f3" class="accordion-collapse collapse" data-bs-parent="#faq">
+            <div class="accordion-body">
+              Bisa. Arsitektur “UMKM-Apps” mendukung multi-layanan. Anda dapat membuka akses layanan lain lewat panel admin/Sheet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-top py-4">
+    <div class="container small muted d-flex flex-wrap gap-2 align-items-center justify-content-between">
+      <div>© <span id="y"></span> UMKM-Apps</div>
+      <div class="d-flex align-items-center gap-3">
+        <a class="text-decoration-none muted" href="./index.html"><i class="fa-solid fa-calculator me-1"></i> Masuk Kalkulator</a>
+        <a class="btn btn-primary btn-sm" href="#beli"><i class="fa-solid fa-bolt me-1"></i> Beli</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Tahun footer
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Kirim ke pay.html + simpan prefill ke localStorage (fallback)
+    document.getElementById('leadForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('fName').value.trim();
+      const contact = document.getElementById('fContact').value.trim();
+      try { localStorage.setItem('umkm_prefill', JSON.stringify({name, contact})); } catch(_) {}
+      location.href = `./pay.html?name=${encodeURIComponent(name)}&contact=${encodeURIComponent(contact)}`;
+    });
+  </script>
+</body>
+</html>

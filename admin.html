@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>UMKM Naik Kelas — Admin Harga</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <style>
+    body{ background:#f6f7fb; }
+    .card{ border-radius:14px; }
+    .brand-badge{width:28px;height:28px;border-radius:8px;display:inline-block;background:linear-gradient(135deg,#4f46e5,#06b6d4);}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .form-help{ color:#6b7280; }
+    .table-sm td,.table-sm th{ padding:.4rem .5rem; }
+    .sticky-actions{ position:sticky; bottom:0; background:#fff; padding:.75rem; border-top:1px solid #e5e7eb; border-bottom-left-radius:14px;border-bottom-right-radius:14px;}
+  </style>
+
+  <!-- (opsional) config global -->
+  <script src="./config.js"></script>
+  <script>window.__WORKER_BASE__ = window.__WORKER_BASE__ || "https://umkm.msabiq-stan.workers.dev";</script>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="./landing.html">
+        <span class="brand-badge"></span><span class="fw-bold">UMKM Naik Kelas</span>
+      </a>
+      <div class="ms-auto d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="./landing.html"><i class="fa-solid fa-house"></i> Beranda</a>
+        <a class="btn btn-outline-secondary btn-sm" href="./index.html"><i class="fa-solid fa-calculator"></i> Kalkulator</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <div id="alert" class="alert d-none" role="alert"></div>
+
+    <!-- KONEKSI -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold mb-3"><i class="fa-solid fa-plug-circle-check me-1"></i> Koneksi & Token</h5>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label">Worker URL</label>
+            <input id="base" class="form-control" placeholder="https://umkm.msabiq-stan.workers.dev">
+            <div class="form-text">Bisa diisi otomatis dari <code>config.js</code> (UMKM_CONFIG.WORKER_URL).</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">ADMIN_TOKEN</label>
+            <div class="input-group">
+              <input id="token" class="form-control" placeholder="masukkan token admin (Script Properties)">
+              <button id="btnRemember" class="btn btn-outline-secondary" type="button" title="Simpan ke browser">
+                <i class="fa-regular fa-bookmark"></i>
+              </button>
+              <button id="btnForget" class="btn btn-outline-danger" type="button" title="Hapus token tersimpan">
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+            </div>
+            <div class="form-text">Token dipakai hanya dari browser ini. Simpan jika perlu.</div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button id="btnLoad" class="btn btn-primary">
+            <span class="load-text"><i class="fa-solid fa-rotate me-1"></i> Muat Konfigurasi</span>
+            <span class="load-spin d-none"><span class="spinner-border spinner-border-sm me-1"></span> Memuat…</span>
+          </button>
+          <button id="btnPing" class="btn btn-outline-secondary"><i class="fa-solid fa-stethoscope"></i> Cek Health</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFAULT PRICE -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold mb-2"><i class="fa-solid fa-tag me-1"></i> Default Price</h5>
+        <div class="mb-2">Harga default saat ini: <span id="curDef" class="mono">-</span></div>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Ubah Default Price</label>
+            <input id="inpDef" type="number" min="0" step="1" class="form-control" placeholder="contoh: 10000">
+          </div>
+          <div class="col-md-4">
+            <button id="btnSetDef" class="btn btn-dark">
+              <span class="def-text"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan Default</span>
+              <span class="def-spin d-none"><span class="spinner-border spinner-border-sm me-1"></span> Menyimpan…</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-help mt-2">Dipakai bila suatu layanan tidak ada di PRICEBOOK_JSON.</div>
+      </div>
+    </div>
+
+    <!-- PRICEBOOK JSON -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold mb-2"><i class="fa-solid fa-book me-1"></i> PRICEBOOK_JSON</h5>
+        <label class="form-label">Objek JSON (service → price)</label>
+        <textarea id="inpPB" rows="8" class="form-control mono" placeholder='{"umkm_basic":10000}'></textarea>
+
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          <button id="btnSetPB" class="btn btn-dark">
+            <span class="pb-text"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan Pricebook</span>
+            <span class="pb-spin d-none"><span class="spinner-border spinner-border-sm me-1"></span> Menyimpan…</span>
+          </button>
+          <button id="btnExport" class="btn btn-outline-primary"><i class="fa-solid fa-download"></i> Ekspor JSON</button>
+          <label class="btn btn-outline-secondary mb-0">
+            <i class="fa-solid fa-file-import"></i> Impor JSON
+            <input id="fileImport" type="file" accept="application/json" hidden>
+          </label>
+          <div id="pbValid" class="ms-auto small"></div>
+        </div>
+
+        <hr>
+        <h6 class="mb-2">Preview</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Service ID</th><th class="text-end">Price</th></tr>
+            </thead>
+            <tbody id="pbTable"><tr><td colspan="2" class="text-muted">Belum ada data</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="form-help mt-2">Contoh menambah layanan uji: <code>{"umkm_basic":10000,"umkm_test":1}</code></div>
+      </div>
+    </div>
+
+    <!-- SET HARGA SATU LAYANAN -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="fw-bold mb-2"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Atur Satu Layanan</h5>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">service_id</label>
+            <input id="sid" class="form-control" value="umkm_basic">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">price</label>
+            <input id="sprice" type="number" min="0" step="1" class="form-control" value="10000">
+          </div>
+          <div class="col-md-4">
+            <button id="btnSetOne" class="btn btn-dark">
+              <span class="one-text"><i class="fa-solid fa-floppy-disk me-1"></i> Simpan Layanan</span>
+              <span class="one-spin d-none"><span class="spinner-border spinner-border-sm me-1"></span> Menyimpan…</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="fw-bold mb-2"><i class="fa-solid fa-terminal me-1"></i> Log</h5>
+        <pre id="log" class="mono mb-0" style="white-space:pre-wrap;min-height:120px">Siap…</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast align-items-center text-bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMsg">OK</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ================== Resolve BASE ==================
+    function getBase(){
+      const fromCfg = (window.UMKM_CONFIG && window.UMKM_CONFIG.WORKER_URL) || '';
+      const inp = document.getElementById('base').value.trim();
+      return (fromCfg || inp || window.__WORKER_BASE__ || 'https://umkm.msabiq-stan.workers.dev').replace(/\/+$/,'');
+    }
+    function getToken(){ return document.getElementById('token').value.trim(); }
+
+    // ================== UI helpers ==================
+    const $ = (id)=>document.getElementById(id);
+    function log(o){ $('log').textContent = (typeof o==='string') ? o : JSON.stringify(o,null,2); }
+    function showAlert(type, msg){
+      const a = $('alert');
+      a.className = 'alert alert-' + type;
+      a.textContent = msg;
+      a.classList.remove('d-none');
+    }
+    function hideAlert(){ $('alert').classList.add('d-none'); }
+    function toast(msg){
+      $('toastMsg').textContent = msg;
+      bootstrap.Toast.getOrCreateInstance($('toast')).show();
+    }
+    function toggle(btnId, spinClass, textClass, loading){
+      const btn = $(btnId);
+      btn.disabled = !!loading;
+      const spin = btn.querySelector('.' + spinClass);
+      const text = btn.querySelector('.' + textClass);
+      if (spin) spin.classList.toggle('d-none', !loading);
+      if (text) text.classList.toggle('d-none', !!loading);
+    }
+
+    // ================== API wrapper ==================
+    async function call(route, payload){
+      const base = getBase();
+      const body = Object.assign({}, payload || {});
+      if (!('admin_token' in body)) body.admin_token = getToken();
+
+      const r = await fetch(base + '/?route=' + encodeURIComponent(route), {
+        method:'POST',
+        headers:{ 'content-type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      let j;
+      try { j = await r.json(); } catch { j = { ok:false, error:'bad json' }; }
+      return j;
+    }
+
+    // ================== Pricebook preview ==================
+    function renderPBPreview(obj){
+      const tbody = $('pbTable');
+      tbody.innerHTML = '';
+      const keys = Object.keys(obj||{});
+      if (!keys.length){
+        tbody.innerHTML = '<tr><td colspan="2" class="text-muted">Belum ada data</td></tr>';
+        return;
+      }
+      keys.sort().forEach(k=>{
+        const v = obj[k];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="mono">${k}</td><td class="text-end mono">${v}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    function validatePBTextarea(){
+      const el = $('inpPB');
+      try{
+        const obj = JSON.parse(el.value || '{}');
+        $('pbValid').innerHTML = '<span class="badge text-bg-success"><i class="fa-solid fa-check"></i> JSON valid</span>';
+        renderPBPreview(obj);
+        return { ok:true, obj };
+      }catch(e){
+        $('pbValid').innerHTML = '<span class="badge text-bg-danger"><i class="fa-solid fa-triangle-exclamation"></i> JSON tidak valid</span>';
+        return { ok:false, error: e.message };
+      }
+    }
+    $('inpPB').addEventListener('input', validatePBTextarea);
+
+    // ================== Buttons ==================
+    $('btnRemember').addEventListener('click', ()=>{
+      try{
+        localStorage.setItem('umkm_admin_base', $('base').value.trim());
+        localStorage.setItem('umkm_admin_token', $('token').value.trim());
+        toast('Disimpan ke browser ini.');
+      }catch(_){ toast('Gagal menyimpan.'); }
+    });
+    $('btnForget').addEventListener('click', ()=>{
+      try{
+        localStorage.removeItem('umkm_admin_token');
+        $('token').value = '';
+        toast('Token dihapus dari browser.');
+      }catch(_){ toast('Gagal menghapus.'); }
+    });
+
+    $('btnPing').addEventListener('click', async ()=>{
+      hideAlert();
+      log('Memeriksa koneksi…');
+      try{
+        // pakai route 'health' via path: /health → worker forward ke Apps Script (optional)
+        const r = await fetch(getBase() + '/health', { method:'GET' });
+        const t = await r.text();
+        log(t || 'OK');
+        toast('Health OK');
+      }catch(e){
+        log(String(e));
+        showAlert('danger','Health gagal: ' + e.message);
+      }
+    });
+
+    $('btnLoad').addEventListener('click', async ()=>{
+      hideAlert();
+      toggle('btnLoad','load-spin','load-text',true);
+      log('Memuat konfigurasi…');
+      try{
+        const j = await call('admin-config-get', {});
+        log(j);
+        if (!j.ok) { showAlert('danger', j.error || 'Gagal memuat.'); return; }
+
+        // dukung beberapa nama field (sheet/clean)
+        const def = j.default_price ?? j.default_price_sheet ?? null;
+        if (def != null) $('curDef').textContent = String(def);
+
+        const pb = j.pricebook_json || j.pricebook_sheet || {};
+        $('inpPB').value = JSON.stringify(pb, null, 2);
+        validatePBTextarea();
+        toast('Konfigurasi dimuat.');
+      }catch(e){
+        showAlert('danger', String(e));
+      }finally{
+        toggle('btnLoad','load-spin','load-text',false);
+      }
+    });
+
+    $('btnSetDef').addEventListener('click', async ()=>{
+      hideAlert();
+      const v = parseInt($('inpDef').value||'0',10);
+      if (isNaN(v) || v < 0){ showAlert('warning','Masukkan angka valid.'); return; }
+      toggle('btnSetDef','def-spin','def-text',true);
+      try{
+        const j = await call('admin-config-set', { default_price: v });
+        log(j);
+        if (!j.ok) { showAlert('danger', j.error || 'Gagal menyimpan.'); return; }
+        $('curDef').textContent = String(j.default_price ?? v);
+        toast('Default price disimpan.');
+      }catch(e){
+        showAlert('danger', String(e));
+      }finally{
+        toggle('btnSetDef','def-spin','def-text',false);
+      }
+    });
+
+    $('btnSetPB').addEventListener('click', async ()=>{
+      hideAlert();
+      const val = $('inpPB').value || '{}';
+      const vres = validatePBTextarea();
+      if (!vres.ok){ showAlert('warning','JSON belum valid.'); return; }
+      toggle('btnSetPB','pb-spin','pb-text',true);
+      try{
+        const j = await call('admin-config-set', { pricebook_json: val });
+        log(j);
+        if (!j.ok) { showAlert('danger', j.error || 'Gagal menyimpan.'); return; }
+        toast('Pricebook disimpan.');
+      }catch(e){
+        showAlert('danger', String(e));
+      }finally{
+        toggle('btnSetPB','pb-spin','pb-text',false);
+      }
+    });
+
+    $('btnSetOne').addEventListener('click', async ()=>{
+      hideAlert();
+      const sid = $('sid').value.trim();
+      const price = parseInt($('sprice').value||'0',10);
+      if (!sid){ showAlert('warning','Isi service_id.'); return; }
+      if (isNaN(price) || price < 0){ showAlert('warning','Harga tidak valid.'); return; }
+      toggle('btnSetOne','one-spin','one-text',true);
+      try{
+        const j = await call('admin-price-set', { service_id: sid, price });
+        log(j);
+        if (!j.ok) { showAlert('danger', j.error || 'Gagal menyimpan.'); return; }
+        // Update textarea pricebook lokal agar konsisten
+        try{
+          const obj = JSON.parse($('inpPB').value || '{}');
+          obj[sid] = price;
+          $('inpPB').value = JSON.stringify(obj, null, 2);
+          validatePBTextarea();
+        }catch(_) {}
+        toast(`Harga ${sid} di-set: ${price}`);
+      }catch(e){
+        showAlert('danger', String(e));
+      }finally{
+        toggle('btnSetOne','one-spin','one-text',false);
+      }
+    });
+
+    // Ekspor / Impor file
+    $('btnExport').addEventListener('click', ()=>{
+      const txt = $('inpPB').value || '{}';
+      const blob = new Blob([txt], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pricebook.json';
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    });
+    $('fileImport').addEventListener('change', async (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const txt = await f.text();
+      $('inpPB').value = txt;
+      const v = validatePBTextarea();
+      if (v.ok) toast('File dimuat ke editor. Klik "Simpan Pricebook" untuk menyimpan ke server.');
+      else showAlert('warning','JSON dari file tidak valid.');
+      e.target.value = '';
+    });
+
+    // ================== Init (prefill) ==================
+    (function init(){
+      try{
+        const savedBase = localStorage.getItem('umkm_admin_base'); if (savedBase) $('base').value = savedBase;
+        const savedTok  = localStorage.getItem('umkm_admin_token'); if (savedTok) $('token').value = savedTok;
+      }catch(_){}
+      // Prefill dari config.js kalau input kosong
+      if (!$('base').value && window.UMKM_CONFIG && window.UMKM_CONFIG.WORKER_URL){
+        $('base').value = window.UMKM_CONFIG.WORKER_URL;
+      }
+      // JSON hint awal
+      $('inpPB').value = '{"umkm_basic":10000}';
+      validatePBTextarea();
+      log('Siap. Klik "Muat Konfigurasi" untuk sinkron dengan server.');
+    })();
+  </script>
+</body>
+</html>

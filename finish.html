@@ -6,41 +6,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="./config.js"></script>
   <style>
-    html,body{height:100%} body{margin:0;display:flex;align-items:center;justify-content:center;font:15px system-ui;background:#fff;color:#0b3e3a}
-    .wrap{display:flex;align-items:center;gap:.6rem}
+    html,body{height:100%}body{margin:0;display:flex;align-items:center;justify-content:center;font:15px system-ui;background:#fff;color:#0b3e3a}
+    .row{display:flex;align-items:center;gap:.6rem}
     .sp{width:14px;height:14px;border:3px solid #e5e7eb;border-top-color:#0ea5a7;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     a{color:#0ea5a7}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="sp"></div>
-    <div>Memproses & menutup tab pembayaran…</div>
-  </div>
+  <div class="row"><div class="sp"></div><div>Memproses & menutup tab pembayaran…</div></div>
 
   <script>
     (function () {
-      // Tujuan balik: pay.html + semua query dari Midtrans
-      var search = location.search || "";
       var PAY = (window.UMKM_CONFIG && UMKM_CONFIG.PAGES && UMKM_CONFIG.PAGES.pay) || "./pay.html";
-      var target = PAY + (search.startsWith("?") ? search : ("?" + search));
+      var search = location.search || "";
+      var target = PAY + (search ? (search.startsWith("?") ? search : "?" + search) : "");
 
-      try {
-        // Jika tab Snap ini dibuka lewat window.open dari pay.html,
-        // kembalikan fokus ke pay + refresh dengan query, lalu tutup diri.
+      try{
         if (window.opener && !window.opener.closed) {
-          try { window.opener.location.replace(target); } catch(_) {}
-          try { window.opener.focus(); } catch(_) {}
-          // Coba tutup diri (ada browser yang membolehkan jika tab dibuka via script)
+          try { window.opener.location.replace(target); } catch(_){}
+          try { window.opener.focus(); } catch(_){}
           window.close();
-          // Fallback: kalau tutup gagal, alihkan tab ini ke pay.html (masih OK)
-          setTimeout(function(){ location.replace(target); }, 300);
+          setTimeout(function(){ location.replace(target); }, 300); // fallback jika close ditolak
           return;
         }
-      } catch(_) {}
+      }catch(_){}
 
-      // Fallback: jika tidak ada opener (mis. dibuka di tab yang sama), langsung ke pay.html
+      // Jika tidak ada opener (dibuka di tab yang sama), langsung kembali ke pay
       location.replace(target);
     })();
   </script>
